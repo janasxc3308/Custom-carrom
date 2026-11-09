@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Custom Carrom - 2 to 12 Players Multiplayer</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#070d19;color:#edf5ff;font:15px system-ui,Arial;text-align:center;padding-bottom:120px}header{padding:18px 8px 8px}h1{margin:0;color:#65eaff;letter-spacing:2px;text-shadow:0 0 18px #00bfe8}.sub{color:#90a8cb;font-size:12px;margin-top:5px}.panel{width:min(96vw,760px);margin:12px auto;padding:15px;background:#101b30;border:1px solid #263b5e;border-radius:15px}.row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}input,select,button{font:inherit;padding:10px 12px;border-radius:9px;border:1px solid #324967;background:#172641;color:#fff;max-width:100%}button{background:#5be5f5;color:#06121b;border:0;font-weight:800;cursor:pointer}button.alt{background:#263958;color:#fff}button:disabled{opacity:.45;cursor:not-allowed}
+
+.lobby-box { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+.box-column { flex: 1; min-width: 250px; background: #172641; padding: 15px; border-radius: 12px; border: 1px solid #2b4365; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.box-column h3 { margin: 0; color: #5be5f5; font-size: 16px; }
+.generated-code { font-size: 24px; font-weight: 900; letter-spacing: 4px; color: #ffe08a; background: #0c1526; padding: 10px 20px; border-radius: 8px; border: 1px dashed #5be5f5; width: 100%; text-align: center; }
+
+#boardWrap{width:min(96vw,700px);margin:12px auto;position:relative}canvas{display:block;width:100%;height:auto;border-radius:18px;touch-action:none;box-shadow:0 0 32px #00cfff22}#status{font-weight:800;color:#68eaff;margin-top:10px}#scores{font-size:15px;font-weight:bold;line-height:1.7;color:#ffe08a}.note{font-size:12px;line-height:1.6;color:#91a8c9}.hidden{display:none!important}
+.player-list { width: 100%; background: #0c1526; border-radius: 8px; padding: 8px; text-align: left; max-height: 140px; overflow-y: auto; font-size: 13px; color: #90a8cb; }
+.player-item { padding: 6px 8px; border-bottom: 1px solid #1a2b4c; display: flex; justify-content: space-between; align-items: center; }
+
+.slider-container{width:min(96vw,500px);margin:20px auto 10px;padding:15px 20px;background:#101b30;border:2px solid #263b5e;border-radius:25px;box-shadow:0 0 15px #00cfff15;display:flex;flex-direction:column;gap:10px;transition:opacity 0.3s}
+.slider-row{display:flex;align-items:center;gap:12px;width:100%}
+.slider-label{font-size:12px;font-weight:700;color:#5be5f5;white-space:nowrap}
+.slider-bar{flex:1;-webkit-appearance:none;appearance:none;height:14px;border-radius:7px;background:#182844;outline:none;border:1px solid #36537f}
+.slider-bar::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:32px;height:32px;border-radius:50%;background:radial-gradient(circle at 35% 35%, #ffffff 0%, #5be5f5 55%, #087ca9 100%);cursor:pointer;border:2px solid #fff;box-shadow:0 0 12px #5be5f5}
+
+.teams-boards-container { display: flex; gap: 10px; width: 100%; margin-top: 10px; flex-wrap: wrap; }
+.team-board-box { flex: 1; min-width: 210px; background: #0c1526; border: 1px solid #203354; border-radius: 12px; padding: 10px; text-align: left; max-height: 160px; overflow-y: auto; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+.bottom-player-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; background: #132238; border-radius: 6px; border: 1px solid #1e3352; }
+.bottom-player-row.active-playing { border-color: #5be5f5; background: #183152; box-shadow: 0 0 8px rgba(91,229,245,0.3); }
+.playing-badge { background: #2ed573; color: #06121b; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<header><h1>CUSTOM CARROM</h1><div class="sub">2 TO 12 PLAYERS • LOBBY & BOARD SYSTEM</div></header>
+
+<section id="lobbyScreen" class="panel">
+ <div class="row" style="margin-bottom: 15px;">
+   <input id="playerName" maxlength="18" placeholder="Enter your name" value="Player 1">
+   <button id="updateNameBtn" class="alt">Update Name</button>
+ </div>
+ 
+ <div class="lobby-box">
+   <div class="box-column">
+     <h3>Create Room Code</h3>
+     <div id="displayRoomCode" class="generated-code">----</div>
+     <button id="createRoomBtn">Generate 4-Digit Code</button>
+   </div>
+
+   <div class="box-column">
+     <h3>Enter Join Room Code</h3>
+     <input id="roomInput" maxlength="4" placeholder="e.g. 4821" style="width:100%;text-align:center;letter-spacing:2px;font-size:20px;font-weight:bold;">
+     <button id="joinRoomBtn" class="alt">Join Room</button>
+   </div>
+ </div>
+
+ <div style="margin-top: 15px; width: 100%;">
+   <div style="font-size: 13px; color: #5be5f5; margin-bottom: 5px; font-weight: bold;">Players Joined in Lobby:</div>
+   <div id="playerListContainer" class="player-list">Waiting to create or join a room...</div>
+ </div>
+
+ <button id="startGameBtn" class="hidden" style="margin-top: 15px; background: #2ed573; width: 100%; font-size: 18px; padding: 12px;">Start Game (Host)</button>
+ <div id="roomInfo" class="note" style="margin-top: 10px;"></div>
+</section>
+
+<div id="gameArea" class="hidden">
+  <section class="panel">
+   <div class="row">
+     <label for="players">Board / Players</label>
+     <select id="players">
+       <option value="2">2 Players (Square)</option>
+       <option value="3">3 Players (Triangle)</option>
+       <option value="4">4 Players (Square)</option>
+       <option value="5">5 Players (Pentagon)</option>
+       <option value="6">6 Players (Hexagon)</option>
+       <option value="7">7 Players (Heptagon)</option>
+       <option value="8">8 Players (Octagon)</option>
+       <option value="9">9 Players (Nonagon)</option>
+       <option value="10">10 Players (Decagon)</option>
+       <option value="11">11 Players (Hendecagon)</option>
+       <option value="12">12 Players (Dodecagon)</option>
+     </select>
+     <button id="shoot" class="hidden">Shoot</button>
+   </div>
+  </section>
+  <section class="panel">
+   <div class="note" style="margin-bottom:5px"><span style="color:#61dcff">● WHITE (Team A)</span> &nbsp; <span style="color:#ff9bda">● BLACK (Team B)</span> &nbsp; | &nbsp; 🔴 Queen</div>
+   <div id="scores">Team A: 0 pts | Team B: 0 pts</div><div id="status">Game in progress</div>
+  </section>
+
+  <div id="boardWrap">
+    <canvas id="game" width="700" height="700"></canvas>
+  </div>
+
+  <div class="slider-container">
+    <div class="slider-row">
+      <span class="slider-label">STRIKER POSITION</span>
+      <input type="range" id="strikerSlider" class="slider-bar" min="-100" max="100" value="0">
+    </div>
+    
+    <div class="teams-boards-container">
+      <div class="team-board-box">
+        <h4 style="margin:0 0 6px 0; color:#61dcff; font-size:13px; border-bottom:1px solid #1a2b4c; padding-bottom:4px;">Team A Board (White)</h4>
+        <div id="teamAList" style="display:flex; flex-direction:column; gap:5px;"></div>
+      </div>
+      <div class="team-board-box">
+        <h4 style="margin:0 0 6px 0; color:#ff9bda; font-size:13px; border-bottom:1px solid #1a2b4c; padding-bottom:4px;">Team B Board (Black)</h4>
+        <div id="teamBList" style="display:flex; flex-direction:column; gap:5px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDbzUIkL0bqraU8njOqgWQYjoThuT6QPrI",
+  authDomain: "custom-carrom.firebaseapp.com",
+  databaseURL: "https://custom-carrom-default-rtdb.firebaseio.com", 
+  projectId: "custom-carrom",
+  storageBucket: "custom-carrom.firebasestorage.app",
+  messagingSenderId: "754563023337",
+  appId: "1:754563023337:web:a6e2fd3b5b77c661108b78",
+  measurementId: "G-CEWGHS69E8"
+};
+
+let db=null, roomRef=null, roomCode='', mySeat=-1, isHost=false, online=false, syncing=false;
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const $=id=>document.getElementById(id);
+const W=700, C=350, BR=300, CR=12, SR=16, PR=20;
+let n=2, coins=[], pocketAnimations=[], striker=null, turn=0, teamScores={A:0, B:0}, playerScores=[], aim=null, dragging=false, moving=false, gameOver=false, message='', winner='', playersList=[];
+let queenPending=false, queenExtraTurn=false;
+
+function boardSides(){ return n===2 ? 4 : n; }
+function seatAng(i){
+  let sides=boardSides();
+  let angleStep=2*Math.PI/sides;
+  let sideIndex = n===2 ? i*2 : i;
+  return -Math.PI/2 + (sideIndex + 0.5) * angleStep;
+}
+function ang(i,count=boardSides()){ return -Math.PI/2 + i*2*Math.PI/count; }
+function pt(r,a){ return {x: C + Math.cos(a)*r, y: C + Math.sin(a)*r}; }
+function poly(r){ let sides=boardSides(); return Array.from({length:sides}, (_,i)=>pt(r, ang(i,sides))); }
+function d(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+function pocketPositions(){ let sides=boardSides(); return Array.from({length:sides}, (_,i)=>pt(BR-30, ang(i,sides))); }
+function coin(x,y,type){ return {x, y, vx:0, vy:0, r:CR, type, id:Math.random().toString(36).slice(2), pocketed:false}; }
+
+function setupCoins(){
+  coins=[coin(C,C,'queen')];
+  for(let i=0;i<6;i++){let a=i*Math.PI/3;coins.push(coin(C+Math.cos(a)*25, C+Math.sin(a)*25, i%2?'white':'black'));}
+  for(let i=0;i<12;i++){let a=i*Math.PI/6;coins.push(coin(C+Math.cos(a)*50, C+Math.sin(a)*50, i%2?'black':'white'));}
+  teamScores = {A:0, B:0};
+  playerScores = Array(n).fill(0);
+  pocketAnimations = [];
+  queenPending = false;
+  queenExtraTurn = false;
+}
+
+function getSliderLimit(){
+  let sides = boardSides();
+  let sideLen = 2 * BR * Math.sin(Math.PI / sides);
+  return Math.min(75, sideLen * 0.38);
+}
+
+function strikerBasePoint(seat=turn, slide=0){
+  let a = seatAng(seat);
+  let center = pt(BR * 0.70, a);
+  let tangent = {x: -Math.sin(a), y: Math.cos(a)};
+  let limit = getSliderLimit();
+  let clampedSlide = Math.max(-limit, Math.min(limit, slide));
+  return {
+    x: center.x + tangent.x * clampedSlide,
+    y: center.y + tangent.y * clampedSlide
+  };
+}
+
+function setStriker(){
+  let p = strikerBasePoint(turn);
+  striker = {x: p.x, y: p.y, vx: 0, vy: 0, r: SR, slide: 0};
+  $('strikerSlider').value = 0;
+  aim = null; dragging = false;
+}
+
+function getNextTeamPlayer(fromTurn, teamChar) {
+  for (let i = 1; i <= n; i++) {
+    let idx = (fromTurn + i) % n;
+    let t = (idx % 2 === 0) ? 'A' : 'B';
+    if (t === teamChar) return idx;
+  }
+  return fromTurn;
+}
+
+$('players').onchange = (e) => {
+  if (!isHost) return;
+  n = parseInt(e.target.value);
+  setupCoins();
+  setStriker();
+  publish();
+};
+
+$('strikerSlider').addEventListener('input', (e) => {
+  if (moving || gameOver || !striker) return;
+  if (online && mySeat !== turn) return;
+  let val = parseFloat(e.target.value);
+  let limit = getSliderLimit();
+  let slide = -(val / 100) * limit;
+  let pos = strikerBasePoint(turn, slide);
+  striker.x = pos.x; striker.y = pos.y; striker.slide = slide;
+  draw(); publish();
+});
+
+function state(){ 
+  return {n, coins, striker, turn, teamScores, playerScores, queenPending, queenExtraTurn, gameOver, message, winner, moving}; 
+}
+
+function applyState(s){
+  if(!s)return;
+  syncing = true;
+  n = s.n || n;
+  $('players').value = n;
+  coins = (s.coins||[]).filter(c=>!c.pocketed);
+  striker = s.striker || striker;
+  turn = s.turn ?? 0;
+  teamScores = s.teamScores || {A:0, B:0};
+  playerScores = s.playerScores || Array(n).fill(0);
+  queenPending = !!s.queenPending;
+  queenExtraTurn = !!s.queenExtraTurn;
+  gameOver = !!s.gameOver; message = s.message || ''; winner = s.winner || '';
+  
+  let remoteMoving = !!s.moving;
+  if (remoteMoving && !moving && online && mySeat !== turn) {
+    moving = true;
+    last = performance.now();
+    requestAnimationFrame(animate);
+  } else if (!remoteMoving) {
+    moving = false;
+  }
+
+  updateUI(); draw();
+  syncing = false;
+}
+
+function publish(){ 
+  if(online && roomRef && !syncing){ 
+    roomRef.update({state: state()}); 
+  } 
+}
+
+function updateUI(){
+  let activePlayerName = playersList[turn] ? playersList[turn].name : 'Player ' + (turn+1);
+  let queenStatusText = queenPending ? " (Queen Cover Turn!)" : "";
+  $('scores').textContent = `Team A: ${teamScores.A} pts  |  Team B: ${teamScores.B} pts${queenStatusText}`;
+  $('status').textContent = gameOver ? winner : `Turn: ${activePlayerName} (${(turn%2===0)?'Team A - White':'Team B - Black'})`;
+
+  let teamAListHTML = '';
+  let teamBListHTML = '';
+
+  for(let i=0; i<n; i++){
+    let pObj = playersList[i];
+    let pName = pObj ? pObj.name : ('Player ' + (i+1));
+    let pScore = playerScores[i] || 0;
+    let isPlaying = (i === turn);
+    let isTeamA = (i % 2 === 0);
+
+    let rowHTML = `
+      <div class="bottom-player-row ${isPlaying ? 'active-playing' : ''}">
+        <div>
+          <strong>👤 ${pName}</strong>
+          ${isPlaying ? '<span class="playing-badge">Playing</span>' : ''}
+        </div>
+        <div style="color: #ffe08a; font-weight: bold;">${pScore} pts</div>
+      </div>
+    `;
+
+    if(isTeamA){
+      teamAListHTML += rowHTML;
+    } else {
+      teamBListHTML += rowHTML;
+    }
+  }
+  $('teamAList').innerHTML = teamAListHTML || '<div style="color:#90a8cb; font-size:12px;">No players</div>';
+  $('teamBList').innerHTML = teamBListHTML || '<div style="color:#90a8cb; font-size:12px;">No players</div>';
+
+  let isMyTurn = !online || (mySeat === turn);
+  let sliderContainer = document.querySelector('.slider-container');
+  if (sliderContainer) {
+    if (!isMyTurn || moving || gameOver) {
+      sliderContainer.style.opacity = '0.3';
+      sliderContainer.style.pointerEvents = 'none';
+      $('strikerSlider').disabled = true;
+    } else {
+      sliderContainer.style.opacity = '1';
+      sliderContainer.style.pointerEvents = 'auto';
+      $('strikerSlider').disabled = false;
+    }
+  }
+  $('players').disabled = !isHost;
+}
+
+async function loadFirebase(){
+  if(db)return true;
+  if(!window.firebase){
+    await new Promise((res,rej)=>{let s=document.createElement('script');s.src='https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)});
+    await new Promise((res,rej)=>{let s=document.createElement('script');s.src='https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)});
+  }
+  if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
+  db=firebase.database(); return true;
+}
+
+function generate4DigitCode(){ return Math.floor(1000 + Math.random() * 9000).toString(); }
+
+$('createRoomBtn').onclick=async()=>{
+  try{
+    if(!await loadFirebase())return;
+    roomCode = generate4DigitCode();
+    $('displayRoomCode').textContent = roomCode;
+    roomRef = db.ref('carromRooms/'+roomCode);
+    mySeat=0; isHost=true; online=true;
+    let playerName = $('playerName').value.trim() || 'Player 1';
+    n = parseInt($('players').value);
+    await roomRef.set({ host: 0, status: 'waiting', players: [{name: playerName, seat: 0}], state: null });
+    $('startGameBtn').classList.remove('hidden');$('roomInfo').textContent='Room created! Waiting for players...';
+    listenRoom();
+  }catch(e){$('roomInfo').textContent='Error: '+e.message;}
+};
+
+$('joinRoomBtn').onclick=async()=>{
+  try{
+    if(!await loadFirebase())return;
+    let code = $('roomInput').value.trim();
+    if(code.length !== 4){ $('roomInfo').textContent='Please enter 4-digit code.'; return; }
+    roomCode = code; roomRef = db.ref('carromRooms/'+code);
+    let snap = await roomRef.once('value');
+    if(!snap.exists()){ $('roomInfo').textContent='Room not found!'; return; }
+    let data = snap.val();
+    let players = data.players || [];
+    mySeat = players.length; isHost = false; online = true;
+    let playerName = $('playerName').value.trim() || ('Player '+(mySeat+1));
+    players.push({name: playerName, seat: mySeat});
+    await roomRef.update({players});
+    $('roomInfo').textContent='Joined room! Waiting for host to start...';
+    listenRoom();
+  }catch(e){$('roomInfo').textContent='Error: '+e.message;}
+};
+
+$('updateNameBtn').onclick=async()=>{
+  if(!roomRef || mySeat===-1) return;
+  let newName = $('playerName').value.trim() || ('Player '+(mySeat+1));
+  let snap = await roomRef.once('value');
+  if(snap.exists()){
+    let data = snap.val();
+    let ps = data.players || [];
+    if(ps[mySeat]) ps[mySeat].name = newName;
+    await roomRef.update({players: ps});
+  }
+};
+
+$('startGameBtn').onclick=async()=>{
+  if(!isHost) return;
+  n = parseInt($('players').value);
+  setupCoins(); setStriker();
+  await roomRef.update({ status: 'playing', state: state() });
+};
+
+function listenRoom(){
+  roomRef.on('value', snap => {
+    let data = snap.val(); if(!data) return;
+    playersList = data.players || [];
+    $('playerListContainer').innerHTML = playersList.map(p => `<div class="player-item"><span>👤 Seat ${p.seat+1}: <strong>${p.name}</strong> (${p.seat%2===0?'Team A - White':'Team B - Black'})</span> <span>${p.seat===0?'(Host)':''}</span></div>`).join('');
+    
+    if(data.status === 'playing'){
+      $('lobbyScreen').classList.add('hidden');$('gameArea').classList.remove('hidden');
+      if(data.state && !syncing) {
+        applyState(data.state);
+      }
+    }
+  });
+}
+
+function polygon(points,fill,stroke,width=3){
+  ctx.beginPath(); points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.closePath(); ctx.fillStyle=fill; ctx.fill(); ctx.strokeStyle=stroke; ctx.lineWidth=width; ctx.stroke();
+}
+
+function drawBoard(){
+  ctx.save();ctx.shadowColor='#00d9ff';ctx.shadowBlur=22;polygon(poly(BR+9),'#102039','#16dfff',3);ctx.restore();
+  polygon(poly(BR),'#573821','#d0a06a',5); polygon(poly(BR-15),'#c48c54','#ffe0a5',3); polygon(poly(BR-31),'#d8a66e','#8b542f',2);
+  for(let p of pocketPositions()){
+    ctx.beginPath();ctx.arc(p.x,p.y,PR,0,Math.PI*2);ctx.fillStyle='#02050b';ctx.fill();
+    ctx.strokeStyle='#f4ce91';ctx.lineWidth=2;ctx.stroke();
+  }
+}
+
+function drawPiece(o){
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+  
+  let g = ctx.createRadialGradient(o.x - 3, o.y - 3, 1, o.x, o.y, o.r);
+  if(o.type === 'queen'){
+    g.addColorStop(0, '#ffb4d4');
+    g.addColorStop(0.6, '#e81c63');
+    g.addColorStop(1, '#880e4f');
+  } else if(o.type === 'white'){
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.6, '#eef2f7');
+    g.addColorStop(1, '#b0b8c4');
+  } else {
+    g.addColorStop(0, '#4a5568');
+    g.addColorStop(0.6, '#1a202c');
+    g.addColorStop(1, '#090d16');
+  }
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = o.type === 'white' ? '#8a99ad' : (o.type === 'queen' ? '#ffccd5' : '#4a5568');
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(o.x, o.y, o.r * 0.55, 0, Math.PI * 2);
+  ctx.strokeStyle = o.type === 'white' ? '#cbd5e1' : (o.type === 'queen' ? '#ffe3ee' : '#2d3748');
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(o.x, o.y, o.r * 0.2, 0, Math.PI * 2);
+  ctx.fillStyle = o.type === 'white' ? '#e2e8f0' : (o.type === 'queen' ? '#fff' : '#1a202c');
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawPocketAnimations(){
+  for(let i=pocketAnimations.length-1; i>=0; i--){
+    let anim = pocketAnimations[i];
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(anim.x, anim.y, anim.r, 0, Math.PI*2);
+    ctx.fillStyle = anim.color;
+    ctx.globalAlpha = anim.alpha;
+    ctx.fill();
+    ctx.restore();
+    anim.r *= 0.85;
+    anim.alpha -= 0.08;
+    if(anim.alpha <= 0 || anim.r <= 1) pocketAnimations.splice(i, 1);
+  }
+}
+
+function drawStriker(){
+  if(!striker)return;
+  ctx.save(); ctx.beginPath(); ctx.arc(striker.x,striker.y,SR,0,Math.PI*2);
+  let g=ctx.createRadialGradient(striker.x-4,striker.y-4,1,striker.x,striker.y,SR);
+  g.addColorStop(0,'#fff7bc'); g.addColorStop(1,'#087ca9');
+  ctx.fillStyle=g; ctx.fill(); 
+  ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+  ctx.restore();
+}
+
+function drawAimLine(){
+  if(!aim || !striker || moving) return;
+  let dx = striker.x - aim.x;
+  let dy = striker.y - aim.y;
+  let len = Math.hypot(dx, dy);
+  if(len < 5) return;
+
+  let aimX = striker.x + (dx / len) * 160;
+  let aimY = striker.y + (dy / len) * 160;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.setLineDash([6, 6]);
+  ctx.moveTo(striker.x, striker.y);
+  ctx.lineTo(aimX, aimY);
+  ctx.strokeStyle = '#ff4757';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(aimX, aimY, 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#ff4757';
+  ctx.fill();
+  ctx.restore();
+}
+
+function getRot(){
+  let activeSeat = online && mySeat !== -1 ? mySeat : turn;
+  return Math.PI / 2 - seatAng(activeSeat);
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,W);
+  ctx.save();
+  let rot = getRot();
+  ctx.translate(C, C);
+  ctx.rotate(rot);
+  ctx.translate(-C, -C);
+
+  drawBoard(); 
+  coins.forEach(drawPiece); 
+  drawPocketAnimations();
+  if(striker) drawStriker();
+  drawAimLine();
+
+  ctx.restore();
+}
+
+function getPointerPos(e){
+  let r=canvas.getBoundingClientRect();
+  let rawX=(e.clientX-r.left)*W/r.width;
+  let rawY=(e.clientY-r.top)*W/r.height;
+  let rot = getRot();
+  let dx = rawX - C, dy = rawY - C;
+  let cos = Math.cos(-rot), sin = Math.sin(-rot);
+  return { x: C + dx * cos - dy * sin, y: C + dx * sin + dy * cos };
+}
+
+canvas.addEventListener('pointerdown',e=>{
+  if(moving||gameOver||!striker)return;
+  if(online&&mySeat!==turn)return;
+  let pos = getPointerPos(e);
+  if(d(pos, striker) < 55){ aim = {x: pos.x, y: pos.y}; }
+});
+
+canvas.addEventListener('pointermove',e=>{
+  if(!aim||moving)return;
+  let pos = getPointerPos(e);
+  aim = {x: pos.x, y: pos.y};
+  draw();
+});
+
+canvas.addEventListener('pointerup',e=>{
+  if(!aim||moving)return;
+  if(online&&mySeat!==turn)return;
+  let pos = getPointerPos(e);
+  let dx = striker.x - pos.x, dy = striker.y - pos.y, len = Math.hypot(dx,dy);
+  aim = null;
+  if(len < 5) return;
+  let power = Math.min(len, 110) * .12;
+  striker.vx = dx / len * power; striker.vy = dy / len * power;
+  moving = true; last = performance.now();
+  
+  publish(); // Send immediately to firebase on shoot
+  requestAnimationFrame(animate);
+});
+
+function resolveCollisions(){
+  let all = [striker, ...coins].filter(o => o && !o.pocketed);
+  for(let subSteps=0; subSteps<4; subSteps++){
+    for(let i=0; i<all.length; i++){
+      for(let j=i+1; j<all.length; j++){
+        let a = all[i], b = all[j];
+        let dist = d(a, b);
+        let minDist = a.r + b.r;
+        if(dist < minDist && dist > 0){
+          let nx = (b.x - a.x) / dist;
+          let ny = (b.y - a.y) / dist;
+          let overlap = minDist - dist;
+          a.x -= nx * overlap * 0.5;
+          a.y -= ny * overlap * 0.5;
+          b.x += nx * overlap * 0.5;
+          b.y += ny * overlap * 0.5;
+
+          let kx = a.vx - b.vx;
+          let ky = a.vy - b.vy;
+          let p = 2 * (nx * kx + ny * ky) / 2;
+          a.vx -= p * nx;
+          a.vy -= p * ny;
+          b.vx += p * nx;
+          b.vy += p * ny;
+        }
+      }
+    }
+  }
+}
+
+function resolvePolygonWallCollisions(o) {
+  let sides = boardSides();
+  let vertices = poly(BR);
+  let r = o.r;
+  
+  for(let i=0; i<sides; i++) {
+    let p1 = vertices[i];
+    let p2 = vertices[(i+1)%sides];
+    
+    let l2 = (p2.x - p1.x)*(p2.x - p1.x) + (p2.y - p1.y)*(p2.y - p1.y);
+    if (l2 === 0) continue;
+    let t = ((o.x - p1.x)*(p2.x - p1.x) + (o.y - p1.y)*(p2.y - p1.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    
+    let distToP1 = Math.hypot(o.x - p1.x, o.y - p1.y);
+    let distToP2 = Math.hypot(o.x - p2.x, o.y - p2.y);
+    if (distToP1 < PR || distToP2 < PR) continue;
+    
+    let edgeLen = Math.sqrt(l2);
+    let nx = -(p2.y - p1.y) / edgeLen;
+    let ny = (p2.x - p1.x) / edgeLen;
+    
+    let toCenterX = C - (p1.x + p2.x)/2;
+    let toCenterY = C - (p1.y + p2.y)/2;
+    if (nx * toCenterX + ny * toCenterY < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    
+    let sideCheck = (o.x - p1.x) * nx + (o.y - p1.y) * ny;
+    if (sideCheck < r) {
+      let overlap = r - sideCheck;
+      o.x += nx * overlap;
+      o.y += ny * overlap;
+      
+      let dot = o.vx * nx + o.vy * ny;
+      if (dot < 0) {
+        o.vx -= 1.8 * dot * nx;
+        o.vy -= 1.8 * dot * ny;
+      }
+    }
+  }
+}
+
+let shotPocketedOwnCoin = false;
+
+function physics(dt){
+  let all=[striker,...coins];
+  for(let o of all){
+    if(!o) continue;
+    o.x+=o.vx*dt; o.y+=o.vy*dt; o.vx*=Math.pow(.992,dt); o.vy*=Math.pow(.992,dt);
+    if(Math.hypot(o.vx,o.vy)<.035)o.vx=o.vy=0;
+    
+    resolvePolygonWallCollisions(o);
+
+    pocketPositions().
